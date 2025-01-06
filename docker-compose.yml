@@ -1,0 +1,47 @@
+
+services:
+  pgdb:
+    image: postgres:latest
+    container_name: pgdb
+    environment:
+      POSTGRES_DB: BytesDB
+      POSTGRES_USER: Bytes
+      POSTGRES_PASSWORD: BytesPass
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Bytes -d BytesDB"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - '6379:6379'
+
+  server:
+    build:
+      dockerfile: Dockerfile
+    container_name: server
+    command: ["sh", "-c", "npm run schema && npm run dev"]
+    ports:
+      - "3000:3000"
+    environment:
+      SERVER_PORT: 3000
+      POSTGRES_HOST: pgdb
+      POSTGRES_USER: Bytes
+      POSTGRES_DB: BytesDB
+      POSTGRES_PASSWORD: BytesPass
+      POSTGRES_PORT: 5432
+    depends_on:
+      pgdb:
+        condition: service_healthy
+      redis:
+        condition: service_started
